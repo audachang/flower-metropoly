@@ -1,0 +1,20 @@
+花花大富翁 — 背景音樂授權說明
+================================
+
+以下 MP3 背景音樂取自 Internet Archive 的公共領域（CC0 1.0）合輯
+「Instrumental Organ, Bossa Nova」。
+
+授權：Creative Commons Zero (CC0 1.0) — 公共領域，無須署名，可自由使用、
+重製、修改與散布，包含商業用途。
+授權連結：https://creativecommons.org/publicdomain/zero/1.0/
+來源合輯：https://archive.org/details/instrumental-organ-bossa-nova
+
+收錄曲目（已重新命名）：
+- jazz1_bossa_nova.mp3    （原檔 bossa-nova-14396.mp3）
+- jazz2_rainy_city.mp3    （原檔 bossa-nova-in-a-rainy-city-4575.mp3）
+- jazz3_bluesy_swing.mp3  （原檔 bluesy-swing-11385.mp3）
+- jazz4_summer_flute.mp3  （原檔 summer-flute-jazz-bossa-nova-instrumental-music-for-relaxing-964.mp3）
+
+這些檔案以 CC0 公共領域釋出，可放心使用於本遊戲與任何用途。
+如需更換曲目，將新的 .mp3 放入此 music 資料夾，並在遊戲 HTML 的
+LOCAL_TRACKS 陣列加入檔名即可。
