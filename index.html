@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>花花大富翁 — 可玩原型 v3</title>
+<style>
+  :root{
+    --bg:#1b2a1f; --panel:#23362a; --ink:#f3f7f0; --muted:#b6d2b8;
+    --gold:#f0cf72; --accent:#8fd896; --danger:#ef7d7d;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+       background:radial-gradient(circle at 50% 0%, #25402c, #131c16);color:var(--ink);font-size:16px;}
+  h1{font-size:28px;margin:0;}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .tag{font-size:14px;color:var(--muted);}
+  .layout{display:grid;grid-template-columns:1fr 380px;gap:18px;}
+  @media(max-width:980px){.layout{grid-template-columns:1fr;}}
+
+  .board{display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);
+         gap:5px;aspect-ratio:1/1;background:var(--panel);padding:10px;border-radius:16px;
+         box-shadow:0 8px 30px rgba(0,0,0,.4);}
+  .cell{background:#2c4334;border-radius:9px;padding:5px;font-size:13px;position:relative;
+        display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;min-height:0;
+        border:1px solid rgba(255,255,255,.05);transition:box-shadow .2s;}
+  .cell.here{box-shadow:0 0 0 3px var(--gold), 0 0 14px var(--gold);z-index:2;}
+  .cell .nm{font-weight:700;line-height:1.15;font-size:12px;}
+  .cell .price{color:var(--muted);font-size:10.5px;font-weight:600;}
+  .cell.colorbar::before{content:"";position:absolute;top:0;left:0;right:0;height:7px;background:var(--c);}
+  .cell.special{background:#34503c;align-items:center;justify-content:center;text-align:center;}
+  .cell .ico{font-size:20px;line-height:1;}
+  .cell.special .nm{font-size:11px;}
+  .flower-emoji{font-size:25px;line-height:1;}
+  .owners{display:flex;gap:3px;flex-wrap:wrap;}
+  .pawn{width:24px;height:24px;border-radius:50%;border:2.5px solid #fff;font-size:15px;display:flex;
+        align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.4);}
+  .ownerdot{width:12px;height:12px;border-radius:3px;display:inline-block;vertical-align:middle;}
+
+  .center{grid-column:2/11;grid-row:2/11;display:flex;flex-direction:column;align-items:center;
+          justify-content:center;gap:10px;text-align:center;background:rgba(0,0,0,.16);border-radius:16px;padding:18px;}
+  .center .turnline{font-size:16px;color:var(--muted);}
+  .center .turnline b{color:var(--gold);font-size:20px;}
+  .bigdice{font-size:54px;letter-spacing:8px;}
+  .bigdice.rolling{animation:shake .12s infinite;}
+  @keyframes shake{0%{transform:translate(3px,0) rotate(-5deg);}50%{transform:translate(-3px,2px) rotate(5deg);}100%{transform:translate(0,-1px);}}
+  .eventbox{min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+            background:rgba(255,255,255,.06);border-radius:14px;padding:14px 20px;width:86%;border:1.5px solid rgba(255,255,255,.08);}
+  .eventbox .eico{font-size:40px;line-height:1;}
+  .eventbox .etitle{font-size:20px;font-weight:900;color:var(--ink);}
+  .eventbox .edesc{font-size:15px;color:var(--muted);line-height:1.4;}
+  .eventbox.flash{animation:flash .6s;}
+  @keyframes flash{0%{transform:scale(.7);opacity:0;}60%{transform:scale(1.06);}100%{transform:scale(1);opacity:1;}}
+  .eventbox.good{border-color:var(--accent);box-shadow:0 0 18px rgba(143,216,150,.4);}
+  .eventbox.bad{border-color:var(--danger);box-shadow:0 0 18px rgba(239,125,125,.4);}
+  .eventbox.big{border-color:var(--gold);box-shadow:0 0 24px rgba(240,207,114,.55);}
+
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:11px;padding:13px 18px;
+         font-weight:800;font-size:17px;background:var(--gold);color:#2a2410;transition:.15s;}
+  button:hover{filter:brightness(1.08);transform:translateY(-1px);}
+  button:active{transform:translateY(0);}
+  button:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+  button.alt{background:var(--accent);color:#10210f;}
+  button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--muted);font-size:15px;padding:9px 14px;}
+
+  .panel{background:var(--panel);border-radius:16px;padding:16px;}
+  .players{display:flex;flex-direction:column;gap:9px;margin-bottom:14px;}
+  .pcard{display:flex;align-items:center;gap:11px;padding:10px;border-radius:12px;background:#2c4334;}
+  .pcard.active{outline:3px solid var(--gold);}
+  .pcard.bust{opacity:.4;text-decoration:line-through;}
+  .pavatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;border:2.5px solid #fff;}
+  .pname{font-weight:800;font-size:16px;}
+  .pcash{margin-left:auto;font-weight:800;color:var(--gold);font-size:18px;}
+  .log{height:150px;overflow-y:auto;font-size:14px;line-height:1.6;background:#16211a;border-radius:11px;padding:11px;color:var(--muted);}
+  .log b{color:var(--ink);}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;}
+  .actions .full{grid-column:1/3;}
+  .legend{font-size:13px;color:var(--muted);margin-top:12px;line-height:1.8;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:7px;background:#3a5644;font-size:12px;font-weight:600;}
+  .snd{display:flex;align-items:center;gap:6px;font-size:14px;}
+  #nowPlaying{font-size:12px;color:var(--muted);margin-left:6px;}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;}
+  .overlay.show{display:flex;}
+  .card{width:330px;background:linear-gradient(160deg,#fdfaf0,#f3ead0);color:#2a2410;border-radius:20px;
+        padding:26px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:pop .35s cubic-bezier(.2,1.4,.5,1);}
+  @keyframes pop{0%{transform:scale(.5) rotate(-8deg);opacity:0;}100%{transform:scale(1) rotate(0);opacity:1;}}
+  .card.sun{background:linear-gradient(160deg,#fff6d6,#ffe49e);}
+  .card.bug{background:linear-gradient(160deg,#ffe1e1,#f3b9b9);}
+  .card .cico{font-size:64px;}
+  .card .ctitle{font-size:22px;font-weight:900;margin:8px 0;}
+  .card .cdesc{font-size:16px;line-height:1.5;margin-bottom:18px;}
+  .card button{width:100%;font-size:17px;}
+
+  /* start screen */
+  .start{position:fixed;inset:0;background:radial-gradient(circle at 50% 30%,#2a4a32,#101a14);
+         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;z-index:80;text-align:center;}
+  .start h2{font-size:48px;margin:0;}
+  .start .sub{font-size:18px;color:var(--muted);max-width:560px;line-height:1.6;}
+  .pickrow{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;}
+  .pick{width:150px;height:160px;border-radius:18px;background:var(--panel);border:2px solid rgba(255,255,255,.1);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:.15s;}
+  .pick:hover{border-color:var(--gold);transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,.4);}
+  .pick .pn{font-size:44px;font-weight:900;color:var(--gold);}
+  .pick .pl{font-size:17px;font-weight:700;}
+  .pick .pe{font-size:24px;letter-spacing:4px;}
+  .pick.sel{border-color:var(--gold);box-shadow:0 0 16px rgba(240,207,114,.5);background:#2f4a38;}
+  .pick .pn{font-size:38px;}
+  .hidden{display:none!important;}
+
+  /* hover 放大格子：整格放大且不被裁切 */
+  .cell{cursor:pointer;}
+  .cell:hover{transform:scale(1.12);z-index:15;box-shadow:0 6px 20px rgba(0,0,0,.55);}
+  /* 浮動完整資訊卡（fixed 定位,絕不被裁切）*/
+  #tooltip{position:fixed;z-index:200;display:none;pointer-events:none;
+    width:200px;background:rgba(18,28,20,.98);border:2px solid var(--gold);border-radius:14px;
+    padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.6);color:var(--ink);
+    transform:translateY(-50%);}
+  #tooltip.show{display:block;animation:tipin .12s ease;}
+  @keyframes tipin{from{opacity:0;transform:translateY(-50%) scale(.9);}to{opacity:1;transform:translateY(-50%) scale(1);}}
+  #tooltip .tflower{font-size:46px;text-align:center;line-height:1;margin-bottom:6px;}
+  #tooltip .tname{font-size:18px;font-weight:900;text-align:center;margin-bottom:8px;}
+  #tooltip .trow{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;padding:2px 0;}
+  #tooltip .trow b{color:var(--ink);}
+  #tooltip .tbar{height:6px;border-radius:4px;margin-bottom:8px;}
+
+  /* 移動中的棋子 */
+  .pawn.moving{animation:hop .18s ease;}
+  @keyframes hop{0%{transform:translateY(0);}50%{transform:translateY(-8px) scale(1.15);}100%{transform:translateY(0);}}
+  .cpu-badge{font-size:9px;background:#5b6fd9;color:#fff;border-radius:4px;padding:0 3px;margin-left:3px;}
+</style>
+</head>
+<body>
+
+<!-- 開場：選擇人數 -->
+<div class="start" id="startScreen">
+  <h2>🌸 花花大富翁</h2>
+  <div class="sub">把荒地一瓣一瓣種成花園。買種子、種花瓣、綻放完整花，挑戰稀有變異。<br>選擇人類玩家與電腦對手的數量（總和 2～4 位）：</div>
+  <div style="display:flex;gap:40px;flex-wrap:wrap;justify-content:center">
+    <div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:10px">👤 人類玩家</div>
+      <div class="pickrow" id="humanPicks">
+        <div class="pick sel" data-h="1" onclick="setHumans(1)"><div class="pn">1</div><div class="pl">1 人</div></div>
+        <div class="pick" data-h="2" onclick="setHumans(2)"><div class="pn">2</div><div class="pl">2 人</div></div>
+        <div class="pick" data-h="3" onclick="setHumans(3)"><div class="pn">3</div><div class="pl">3 人</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:10px">🤖 電腦對手</div>
+      <div class="pickrow" id="cpuPicks">
+        <div class="pick" data-c="0" onclick="setCpus(0)"><div class="pn">0</div><div class="pl">無</div></div>
+        <div class="pick sel" data-c="1" onclick="setCpus(1)"><div class="pn">1</div><div class="pl">1 台</div></div>
+        <div class="pick" data-c="2" onclick="setCpus(2)"><div class="pn">2</div><div class="pl">2 台</div></div>
+        <div class="pick" data-c="3" onclick="setCpus(3)"><div class="pn">3</div><div class="pl">3 台</div></div>
+      </div>
+    </div>
+  </div>
+  <div id="totalHint" style="font-size:15px;color:var(--muted)"></div>
+  <button onclick="beginGame()" style="font-size:20px;padding:15px 40px">🌸 開始遊戲</button>
+  <label class="snd"><input type="checkbox" id="musicToggleStart" checked> 🎵 播放爵士背景音樂</label>
+</div>
+
+<div class="wrap hidden" id="gameWrap">
+  <header>
+    <div>
+      <h1>🌸 花花大富翁 <span class="tag">Flower Metropoly · 原型 v3</span></h1>
+      <div class="tag">買種子 → 種花瓣 → 綻放完整花（3瓣）→ 稀有變異（第4瓣，擲骰決定成敗）</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label class="snd"><input type="checkbox" id="musicToggle" checked> 🎵音樂</label>
+      <select id="musicSource" class="ghost" style="padding:6px 8px;font-size:13px" onchange="switchMusicSource()">
+        <option value="mp3">🎺 本機爵士 MP3</option>
+        <option value="youtube">🎷 YouTube 爵士</option>
+        <option value="synth">🎹 內建合成（離線）</option>
+      </select>
+      <span id="nowPlaying"></span>
+      <label class="snd"><input type="checkbox" id="sfxToggle" checked> 🔊音效</label>
+      <button class="ghost" onclick="backToStart()">↻ 重新開始</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="board" id="board"></div>
+    <div>
+      <div class="panel">
+        <div class="players" id="players"></div>
+        <div class="actions">
+          <button id="rollBtn" class="full" onclick="rollDice()">🎲 擲骰移動</button>
+          <button id="buyBtn" class="alt" onclick="humanBuy()" disabled>🌱 買種子</button>
+          <button id="growBtn" class="alt" onclick="humanGrow()" disabled>🌿 種花瓣</button>
+        </div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;text-align:center">
+          每回合擲骰後可做 <b style="color:var(--gold)">一個</b> 動作（買種子或種一片花瓣），做完自動換下一位
+        </div>
+        <div class="legend">
+          🌱裸地 → 🌿花苞(1) → 🌷半開(2) → <b>🌸綻放(3)</b> → <b>🌺✨稀有變異(4)</b><br>
+          <span class="badge">壟斷一整色花圃才能種花瓣</span>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div style="font-weight:800;margin-bottom:8px;font-size:16px">📜 遊戲記錄</div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 隱藏的 YouTube 背景音樂播放器 -->
+<div id="ytPlayer" style="position:fixed;width:1px;height:1px;left:-9999px;top:-9999px;opacity:0;pointer-events:none"></div>
+<!-- 本機 MP3 背景音樂播放器 -->
+<audio id="mp3Player" preload="none"></audio>
+<!-- 滑過格子的完整資訊浮卡 -->
+<div id="tooltip"></div>
+
+<div class="overlay" id="overlay">
+  <div class="card" id="cardEl">
+    <div class="cico" id="cico">☀️</div>
+    <div class="ctitle" id="ctitle"></div>
+    <div class="cdesc" id="cdesc"></div>
+    <button onclick="closeCard()">好的</button>
+  </div>
+</div>
+
+<script>
+/* 花花大富翁 v3 — 40格、人數選擇、咖啡廳多曲輪播、抽卡、中央事件顯示 */
+
+// ====== 音訊核心 ======
+let actx=null;
+function audio(){if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();return actx;}
+function sfxOn(){const el=document.getElementById('sfxToggle');return el?el.checked:true;}
+function tone(freq,dur,type,vol,when){
+  if(!sfxOn())return;
+  dur=dur||0.12;type=type||'sine';vol=vol||0.18;when=when||0;
+  const c=audio();const o=c.createOscillator(),g=c.createGain();
+  o.type=type;o.frequency.value=freq;const t=c.currentTime+when;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+dur);
+}
+const SFX={
+  roll:function(){tone(220,0.05,'square',0.12);tone(330,0.05,'square',0.12,0.06);tone(440,0.07,'square',0.12,0.12);},
+  buy:function(){tone(523,0.1,'triangle',0.2);tone(784,0.12,'triangle',0.2,0.08);},
+  grow:function(){tone(440,0.1,'sine',0.18);tone(660,0.14,'sine',0.18,0.07);},
+  bloom:function(){[523,659,784,1047].forEach(function(f,i){tone(f,0.18,'sine',0.2,i*0.08);});},
+  mutate:function(){[392,523,659,880,1175].forEach(function(f,i){tone(f,0.2,'triangle',0.22,i*0.07);});},
+  fail:function(){tone(200,0.3,'sawtooth',0.2);tone(150,0.35,'sawtooth',0.2,0.1);},
+  rent:function(){tone(330,0.08,'sine',0.16);tone(247,0.12,'sine',0.16,0.06);},
+  card:function(){tone(660,0.08,'triangle',0.16);tone(880,0.1,'triangle',0.16,0.07);},
+  bad:function(){tone(294,0.15,'sawtooth',0.18);tone(220,0.2,'sawtooth',0.18,0.1);},
+  bust:function(){[440,392,349,294,220].forEach(function(f,i){tone(f,0.25,'sawtooth',0.2,i*0.12);});},
+  go:function(){[659,784,1047].forEach(function(f,i){tone(f,0.15,'triangle',0.2,i*0.1);});},
+};
+
+// ====== 咖啡廳背景音樂：多首曲目輪播 ======
+// 每首曲目 = 一段和弦進行 + 旋律音符，用爵士七和弦營造咖啡廳氛圍。
+const NOTE={C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196.00,A3:220.00,B3:246.94,
+  C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,
+  C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00};
+// 曲目資料：name, bpm, chords(每小節低音根音+和弦音), melody(逐拍旋律, null=休止)
+const TRACKS=[
+  { name:'午後拿鐵', bpm:84,
+    chords:[['C3','E4','G4','B4'],['A3','C4','E4','G4'],['D3','F4','A4','C5'],['G3','B3','D4','F4']],
+    melody:['E5','G5','C5','D5','E5',null,'A4','C5','D5','F5','A4',null,'D5','F5','B4',null] },
+  { name:'雨窗爵士', bpm:72,
+    chords:[['D3','F4','A4','C5'],['G3','B3','D4','F4'],['C3','E4','G4','B4'],['E3','G4','B4','D5']],
+    melody:['A4','D5','F5','E5',null,'C5','D5','A4',null,'G4','B4','C5','E5','D5',null,'A4'] },
+  { name:'蜜糖晨光', bpm:96,
+    chords:[['F3','A3','C4','E4'],['D3','F4','A4','C5'],['G3','B3','D4','F4'],['C3','E4','G4','B4']],
+    melody:['C5','E5','F5','G5','F5','E5','C5',null,'A4','C5','E5','D5',null,'B4','C5',null] },
+  { name:'薄荷微風', bpm:88,
+    chords:[['E3','G4','B4','D5'],['A3','C4','E4','G4'],['F3','A3','C4','E4'],['G3','B3','D4','F4']],
+    melody:[null,'E5','D5','C5','B4','C5','E5',null,'G5','F5','E5','D5','C5',null,'A4','B4'] },
+  { name:'黃昏花圃', bpm:78,
+    chords:[['A3','C4','E4','G4'],['F3','A3','C4','E4'],['D3','F4','A4','C5'],['E3','G4','B4','D5']],
+    melody:['A4','C5','E5',null,'D5','C5','A4','G4',null,'E5','D5','C5','B4','A4',null,'G4'] },
+];
+let musicState={playing:false,track:0,beat:0,timer:null};
+function musicOn(){const el=document.getElementById('musicToggle');return el?el.checked:false;}
+function musicSource(){const el=document.getElementById('musicSource');return el?el.value:'youtube';}
+
+// ===== 音樂路由：本機MP3 / YouTube爵士 / 內建合成 =====
+function startMusic(){
+  stopMusic(); if(!musicOn())return;
+  const src=musicSource();
+  if(src==='mp3'){startMp3();}
+  else if(src==='youtube'){startYouTube();}
+  else{startSynth();}
+}
+function stopMusic(){stopSynth();stopYouTube();stopMp3();
+  const np=document.getElementById('nowPlaying');if(np)np.textContent='';}
+function switchMusicSource(){if(musicOn())startMusic();}
+
+// ----- 本機爵士 MP3 -----
+// 將 music/ 資料夾的曲目隨機輪播。若要加曲,把 .mp3 放進 music/ 並在此加檔名。
+var LOCAL_TRACKS=[
+  {file:'music/jazz1_bossa_nova.mp3',  name:'Bossa Nova'},
+  {file:'music/jazz2_rainy_city.mp3',  name:'Bossa Nova in a Rainy City'},
+  {file:'music/jazz3_bluesy_swing.mp3',name:'Bluesy Swing'},
+  {file:'music/jazz4_summer_flute.mp3',name:'Summer Flute Bossa'},
+];
+var mp3Order=[], mp3Pos=0, mp3Inited=false;
+function shuffleArr(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function startMp3(){
+  var el=document.getElementById('mp3Player');if(!el)return;
+  if(!mp3Inited){
+    mp3Inited=true;
+    el.volume=0.5;
+    el.addEventListener('ended',function(){mp3Next();});
+    el.addEventListener('error',function(){
+      var np=document.getElementById('nowPlaying');
+      if(np)np.textContent='⚠️ 找不到 MP3（需與 music 資料夾同放），可改用其他來源';
+    });
+  }
+  // 建立隨機播放順序
+  mp3Order=shuffleArr(LOCAL_TRACKS.map(function(_,i){return i;}));
+  mp3Pos=0;
+  mp3PlayCurrent();
+}
+function mp3PlayCurrent(){
+  var el=document.getElementById('mp3Player');if(!el)return;
+  if(!musicOn()||musicSource()!=='mp3')return;
+  var tr=LOCAL_TRACKS[mp3Order[mp3Pos]];
+  el.src=tr.file;
+  var p=el.play();
+  var np=document.getElementById('nowPlaying');if(np)np.textContent='🎺 '+tr.name;
+  if(p&&p.catch)p.catch(function(){if(np)np.textContent='🎺 點擊任意處開始播放 '+tr.name;});
+}
+function mp3Next(){
+  mp3Pos++;
+  if(mp3Pos>=mp3Order.length){mp3Order=shuffleArr(mp3Order);mp3Pos=0;} // 重新洗牌輪播
+  mp3PlayCurrent();
+}
+function stopMp3(){var el=document.getElementById('mp3Player');if(el){try{el.pause();}catch(e){}}}
+
+// ----- 內建合成 -----
+function startSynth(){
+  audio(); musicState.playing=true; musicState.beat=0;
+  musicState.track=Math.floor(Math.random()*TRACKS.length);
+  scheduleTrack();
+}
+function stopSynth(){musicState.playing=false;if(musicState.timer){clearTimeout(musicState.timer);musicState.timer=null;}}
+
+// ----- YouTube 爵士清單 -----
+// 使用 YouTube IFrame API 載入一個爵士/咖啡廳 lofi 播放清單,隨機輪播。
+var ytReady=false, ytObj=null, ytWanted=false;
+// 用「搜尋」方式即時取得爵士/咖啡廳 lofi 影片清單,避免固定清單ID失效。
+// 每次開場隨機挑一個關鍵字,讓曲風有變化。
+var JAZZ_QUERIES=['relaxing jazz cafe music','smooth jazz background','coffee shop jazz lofi',
+  'bossa nova cafe jazz','calm piano jazz','jazz lofi hip hop radio'];
+var JAZZ_QUERY=JAZZ_QUERIES[Math.floor(Math.random()*JAZZ_QUERIES.length)];
+function loadYTApi(){
+  if(window.YT&&window.YT.Player){ytReady=true;return;}
+  if(document.getElementById('yt-api'))return;
+  var tag=document.createElement('script');tag.id='yt-api';tag.src='https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+}
+window.onYouTubeIframeAPIReady=function(){
+  ytReady=true;
+  ytObj=new YT.Player('ytPlayer',{
+    height:'1',width:'1',
+    playerVars:{listType:'search',list:JAZZ_QUERY,autoplay:1,loop:1,controls:0},
+    events:{
+      'onReady':function(e){try{e.target.setShuffle(true);e.target.setVolume(45);
+        if(ytWanted&&musicOn()&&musicSource()==='youtube'){e.target.playVideo();}}catch(err){}
+        var np=document.getElementById('nowPlaying');if(np)np.textContent='🎷 YouTube 爵士';},
+      'onStateChange':function(e){
+        var np=document.getElementById('nowPlaying');
+        if(e.data===YT.PlayerState.PLAYING&&ytObj&&ytObj.getVideoData){
+          var d=ytObj.getVideoData();if(np&&d&&d.title)np.textContent='🎷 '+d.title.slice(0,28);
+        }
+        if(e.data===YT.PlayerState.ENDED){try{ytObj.setShuffle(true);ytObj.nextVideo();}catch(err){}}
+      },
+      'onError':function(){var np=document.getElementById('nowPlaying');
+        if(np)np.textContent='⚠️ YouTube 無法播放，已可切換為內建合成';}
+    }
+  });
+};
+function startYouTube(){
+  ytWanted=true;
+  var np=document.getElementById('nowPlaying');if(np)np.textContent='🎷 載入 YouTube 爵士…';
+  if(!ytReady){loadYTApi();return;} // API 就緒後會自動建立 player 並播放
+  if(ytObj&&ytObj.playVideo){try{ytObj.setShuffle(true);ytObj.playVideo();}catch(e){}}
+}
+function stopYouTube(){
+  ytWanted=false;
+  if(ytObj&&ytObj.pauseVideo){try{ytObj.pauseVideo();}catch(e){}}
+}
+function scheduleTrack(){
+  if(!musicState.playing||!musicOn())return;
+  const tr=TRACKS[musicState.track];
+  const beatDur=60/tr.bpm/2; // 八分音符為一拍
+  const np=document.getElementById('nowPlaying');if(np)np.textContent='♪ '+tr.name;
+  playBeat(tr,beatDur);
+}
+function playBeat(tr,beatDur){
+  if(!musicState.playing||!musicOn()){return;}
+  const c=audio();const t=c.currentTime;
+  const beat=musicState.beat;
+  const totalBeats=16; // 每首 16 拍 = 4 小節
+  const bar=Math.floor(beat/4);
+  // 低音 + 和弦墊音（每小節第一拍鋪一次和弦）
+  if(beat%4===0){
+    const chord=tr.chords[bar%tr.chords.length];
+    chord.forEach(function(nn,idx){
+      const o=c.createOscillator(),g=c.createGain();
+      o.type=idx===0?'triangle':'sine';o.frequency.value=NOTE[nn]||220;
+      const vol=idx===0?0.10:0.045;
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+beatDur*4*0.95);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+beatDur*4);
+    });
+  }
+  // 旋律
+  const mn=tr.melody[beat%tr.melody.length];
+  if(mn){
+    const o=c.createOscillator(),g=c.createGain();
+    o.type='sine';o.frequency.value=NOTE[mn]||440;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.085,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+beatDur*0.9);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+beatDur);
+    // 輕微高八度泛音點綴
+    const o2=c.createOscillator(),g2=c.createGain();
+    o2.type='triangle';o2.frequency.value=(NOTE[mn]||440)*2;
+    g2.gain.setValueAtTime(0,t);g2.gain.linearRampToValueAtTime(0.02,t+0.03);
+    g2.gain.exponentialRampToValueAtTime(0.0001,t+beatDur*0.6);
+    o2.connect(g2);g2.connect(c.destination);o2.start(t);o2.stop(t+beatDur*0.7);
+  }
+  musicState.beat++;
+  if(musicState.beat>=totalBeats){
+    // 換下一首（順序輪播，不重複同一首）
+    musicState.beat=0;
+    musicState.track=(musicState.track+1)%TRACKS.length;
+    const np=document.getElementById('nowPlaying');if(np)np.textContent='♪ '+TRACKS[musicState.track].name;
+  }
+  musicState.timer=setTimeout(function(){playBeat(tr,beatDur);},beatDur*1000);
+}
+
+// ====== 棋盤資料（40 格）======
+const COLORS = {daisy:'#caa56a',corn:'#5b8fd9',cosmos:'#e89ac0',marigold:'#e8923a',
+  tulip:'#d65a5a',sunflower:'#e9c44a',rose:'#cf4f7a',orchid:'#9b6dd6'};
+const GRPNAMES={daisy:'雛菊',corn:'矢車菊',cosmos:'波斯菊',marigold:'金盞花',tulip:'鬱金香',sunflower:'向日葵',rose:'玫瑰',orchid:'蘭花'};
+function GRPNAME(g){return GRPNAMES[g]||g;}
+function specialDesc(c){
+  switch(c.t){
+    case 'go':return '經過或停留領 $200';
+    case 'tax':return '繳園藝稅 -$'+c.amt;
+    case 'jail':return '枯萎花園：隨機際遇／被困時可收租領補償';
+    case 'gojail':return '被送進枯萎花園';
+    case 'sun':return '抽陽光卡（多為好事）';
+    case 'bug':return '抽蟲害卡（多為壞事）';
+    case 'market':return '蜜蜂市集：賣花收入';
+    case 'portal':return '傳送門：隨機傳送到某花圃';
+    case 'season':return '季節轉換：暖春成長／寒霜凍傷';
+    case 'free':return '自由花園：領落花基金 +$100';
+    default:return '';
+  }
+}
+// ===== 滑過格子的完整浮動資訊卡（fixed 定位,不被裁切）=====
+function showTooltip(c, cellEl){
+  const tip=document.getElementById('tooltip');if(!tip)return;
+  let html='';
+  if(c.t==='prop'){
+    const stageName=['裸地','花苞','半開','綻放完整花','稀有變異'][c.petals];
+    const ownerName = c.owner!=null ? players[c.owner].name : '無人（可購買）';
+    const rentNow = c.rent*RENTMULT[c.petals];
+    html='<div class="tbar" style="background:'+COLORS[c.grp]+'"></div>'+
+      '<div class="tflower">'+STAGE[c.petals]+'</div>'+
+      '<div class="tname">'+c.nm+'</div>'+
+      '<div class="trow"><span>花圃</span><b>'+GRPNAME(c.grp)+'</b></div>'+
+      '<div class="trow"><span>階段</span><b>'+stageName+'</b></div>'+
+      '<div class="trow"><span>售價</span><b>$'+c.price+'</b></div>'+
+      '<div class="trow"><span>種瓣成本</span><b>$'+c.cost+'</b></div>'+
+      '<div class="trow"><span>目前租金</span><b>$'+rentNow+'</b></div>'+
+      '<div class="trow"><span>地主</span><b>'+ownerName+'</b></div>';
+  } else {
+    html='<div class="tflower">'+c.ico+'</div>'+
+      '<div class="tname">'+c.nm+'</div>'+
+      '<div class="trow" style="justify-content:center;text-align:center">'+specialDesc(c)+'</div>';
+  }
+  tip.innerHTML=html;
+  tip.classList.add('show');
+  // 定位：放在格子右側,若超出視窗則放左側
+  const r=cellEl.getBoundingClientRect();
+  const tw=210;
+  let left=r.right+10;
+  if(left+tw>window.innerWidth) left=r.left-tw-10;
+  if(left<6) left=6;
+  let top=r.top+r.height/2;
+  top=Math.max(120, Math.min(window.innerHeight-120, top));
+  tip.style.left=left+'px';
+  tip.style.top=top+'px';
+}
+function hideTooltip(){const tip=document.getElementById('tooltip');if(tip)tip.classList.remove('show');}
+function P(nm,grp,price,rent,cost){return{t:'prop',nm:nm,grp:grp,price:price,rent:rent,cost:cost,owner:null,petals:0,mutated:false};}
+function S(t,nm,ico,extra){return Object.assign({t:t,nm:nm,ico:ico},extra||{});}
+const BOARD = [
+  S('go','春之苗圃','🌅'),
+  P('雛菊巷','daisy',60,6,50), S('bug','蟲害卡','🐛'), P('雛菊坡','daisy',60,6,50), P('雛菊園','daisy',80,8,50),
+  S('tax','園藝稅','🧾',{amt:100}),
+  P('矢車菊街','corn',100,8,50), S('sun','陽光卡','☀️'), P('矢車菊角','corn',100,8,50), P('矢車菊園','corn',120,9,50),
+  S('jail','枯萎花園','🥀'),
+  P('波斯菊道','cosmos',140,10,100), S('market','蜜蜂市集','🐝'), P('波斯菊園','cosmos',140,10,100), P('波斯菊徑','cosmos',160,12,100),
+  S('sun','陽光卡','☀️'),
+  P('金盞花圃','marigold',180,14,100), P('金盞花徑','marigold',180,14,100), S('portal','傳送門','🌀'), P('金盞花谷','marigold',200,16,100),
+  S('free','自由花園','🏡'),
+  P('鬱金香丘','tulip',220,18,150), S('bug','蟲害卡','🐛'), P('鬱金香台','tulip',220,18,150), P('鬱金香原','tulip',240,20,150),
+  S('season','季節轉換','🍂'),
+  P('向日葵田','sunflower',260,22,150), P('向日葵谷','sunflower',260,22,150), S('sun','陽光卡','☀️'), P('向日葵坡','sunflower',280,24,150),
+  S('gojail','入侵雜草','🌿💀'),
+  P('玫瑰園','rose',300,26,200), S('bug','蟲害卡','🐛'), P('玫瑰苑','rose',300,26,200), P('玫瑰庭','rose',320,28,200),
+  S('tax','落葉稅','🍃',{amt:75}),
+  P('蘭花溫室','orchid',340,32,200), S('market','蜜蜂市集','🐝'), P('蘭花殿','orchid',380,40,200), P('蘭花苑','orchid',400,44,200),
+];
+const N = BOARD.length; // 40
+
+// ===== 兩座中央祕密花園（只能透過「祕密地圖」卡進入，外圈繞圈不會遇到）=====
+// 花園 A「彩虹花園」：偏成長與綻放。花園 B「黃金花園」：偏財富與種子。
+const SECRET_A=[
+  S('seed_station','稀有種子站','🌟'),
+  S('wish_pool','許願池','🪙'),
+  S('rainbow_house','彩虹溫室','🌈'),
+];
+const SECRET_B=[
+  S('gold_fountain','黃金噴泉','⛲'),
+  S('butterfly_hall','蝴蝶大廳','🦋'),
+  S('moon_greenhouse','月光溫室','🌙'),
+];
+let inSecret=false; // 'A' / 'B' / false
+
+const STAGE=['🌱','🌿','🌷','🌸','🌺✨'];
+const RENTMULT=[1,5,15,40,80];
+
+const AVATARS=[{e:'🐝',c:'#e9c44a'},{e:'🦋',c:'#5b8fd9'},{e:'🐞',c:'#d65a5a'},{e:'🐌',c:'#8fd896'}];
+let players=[], cur=0, state='roll', lastCell=null, mutCount={}, pendingCard=null;
+let evt={ico:'🎲',title:'準備擲骰',desc:'點擊「擲骰移動」開始你的回合',cls:'',dice:'🎲 🎲'};
+
+let pickHumans=1, pickCpus=1;
+function setHumans(n){pickHumans=n;updatePicks();}
+function setCpus(n){pickCpus=n;updatePicks();}
+function updatePicks(){
+  // 限制總和 2~4
+  let total=pickHumans+pickCpus;
+  if(total>4){if(pickCpus>0)pickCpus=Math.max(0,4-pickHumans);total=pickHumans+pickCpus;}
+  document.querySelectorAll('#humanPicks .pick').forEach(function(el){
+    el.classList.toggle('sel', +el.getAttribute('data-h')===pickHumans);});
+  document.querySelectorAll('#cpuPicks .pick').forEach(function(el){
+    el.classList.toggle('sel', +el.getAttribute('data-c')===pickCpus);});
+  const hint=document.getElementById('totalHint');
+  if(hint){
+    if(total<2) hint.innerHTML='⚠️ 至少需要 2 位（人類+電腦），請再增加。';
+    else hint.innerHTML='共 <b style="color:var(--gold)">'+total+'</b> 位園丁：'+pickHumans+' 人類 + '+pickCpus+' 電腦';
+  }
+}
+function beginGame(){
+  const total=pickHumans+pickCpus;
+  if(total<2){alert('至少需要 2 位園丁（人類加電腦）。');return;}
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('gameWrap').classList.remove('hidden');
+  const want=document.getElementById('musicToggleStart').checked;
+  document.getElementById('musicToggle').checked=want;
+  audio();
+  if(want)startMusic();
+  newGame(pickHumans,pickCpus);
+}
+function backToStart(){
+  stopMusic();
+  document.getElementById('gameWrap').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+}
+
+function newGame(humans,cpus){
+  if(cpus===undefined){ // 舊呼叫相容:newGame(num) 視為全人類
+    humans=humans||4;cpus=0;
+  }
+  const num=Math.min(4,humans+cpus);
+  players = AVATARS.slice(0,num).map(function(a,i){
+    const isCpu = i>=humans; // 前面是人類,後面是電腦
+    return {id:i,e:a.e,c:a.c,name:(isCpu?'電腦':'玩家')+(i+1),cpu:isCpu,
+      cash:1500,pos:0,bust:false,jail:0,master:false,legend:false,seeds:0};});
+  cur=0; state='roll'; lastCell=null; pendingCard=null;
+  BOARD.forEach(function(c){if(c.t==='prop'){c.owner=null;c.petals=0;c.mutated=false;}});
+  players.forEach(function(p){mutCount[p.id]=0;});
+  evt={ico:'🌷',title:num+' 位園丁開賽！',desc:humans+' 人類 + '+cpus+' 電腦。集滿一整色花圃即可種花。',cls:'big',dice:'🎲 🎲'};
+  document.getElementById('log').innerHTML='';
+  log('🌷 '+num+' 位園丁開始！'+humans+' 人類 + '+cpus+' 電腦，每位 1,500 元。');
+  log('🗺️ 棋盤共 40 格：含陽光卡、蟲害卡、蜜蜂市集、傳送門、季節轉換等互動格。');
+  render();
+  maybeRunCpu();
+}
+
+function ringList(){
+  const ring=[];
+  for(let c=10;c>=0;c--) ring.push([10,c]);
+  for(let r=9;r>=0;r--) ring.push([r,0]);
+  for(let c=1;c<=10;c++) ring.push([0,c]);
+  for(let r=1;r<=9;r++) ring.push([r,10]);
+  return ring; // 40
+}
+const RING=ringList();
+function ringCoord(i){return RING[i%RING.length];}
+
+function setEvent(ico,title,desc,cls){evt={ico:ico,title:title,desc:desc,cls:cls||'',dice:evt.dice};renderCenter(true);}
+function gardenHTML(label,emoji,cells,key,accent){
+  let html='<div style="border:2px solid '+accent+';border-radius:14px;padding:8px 10px;background:rgba(0,0,0,.25);">'+
+    '<div style="font-size:13px;font-weight:800;color:'+accent+';margin-bottom:4px">'+emoji+' '+label+'</div>'+
+    '<div style="display:flex;gap:6px;justify-content:center">';
+  cells.forEach(function(s,i){
+    const occ=players.filter(function(pl){return inSecret===key&&pl._sec===i&&!pl.bust;});
+    const hi=(occ.length>0)?'border-color:var(--gold);box-shadow:0 0 14px var(--gold);transform:scale(1.08);':'';
+    let pawns='';occ.forEach(function(pl){pawns+='<span style="font-size:15px">'+pl.e+'</span>';});
+    html+='<div style="background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.14);'+hi+
+      'border-radius:9px;padding:5px 7px;text-align:center;min-width:66px;transition:.2s">'+
+      '<div style="font-size:20px">'+s.ico+'</div><div style="font-size:10px;color:var(--muted);line-height:1.1">'+s.nm+'</div>'+
+      '<div style="min-height:16px">'+pawns+'</div></div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+function renderCenter(flash){
+  const el=document.getElementById('center');if(!el)return;const p=players[cur];
+  // 兩座祕密花園醒目地顯示在棋盤正中央
+  const gardens='<div style="margin-top:10px;width:96%">'+
+    '<div style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:6px">🔑 中央祕密花園 · 抽「祕密地圖」卡才能進入</div>'+
+    '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'+
+      gardenHTML('彩虹花園','🌈',SECRET_A,'A','#8fd896')+
+      gardenHTML('黃金花園','✨',SECRET_B,'B','#f0cf72')+
+    '</div></div>';
+  el.innerHTML=
+    '<div class="turnline">輪到 <b>'+(p?p.name:'')+'</b> <span style="font-size:24px">'+(p?p.e:'')+'</span> · 現金 <b>$'+(p?p.cash:0)+'</b></div>'+
+    '<div class="bigdice" id="bigdice">'+evt.dice+'</div>'+
+    '<div class="eventbox '+(flash?'flash ':'')+evt.cls+'"><div class="eico">'+evt.ico+'</div>'+
+    '<div class="etitle">'+evt.title+'</div><div class="edesc">'+evt.desc+'</div></div>'+
+    gardens;
+}
+
+function render(){
+  const b=document.getElementById('board');b.innerHTML='';
+  const center=document.createElement('div');center.className='center';center.id='center';
+  center.style.gridColumn='2/11';center.style.gridRow='2/11';b.appendChild(center);renderCenter(false);
+  BOARD.forEach(function(c,i){
+    const rc=ringCoord(i),r=rc[0],col=rc[1];
+    const d=document.createElement('div');d.style.gridRow=(r+1);d.style.gridColumn=(col+1);
+    const someoneHere = players.some(function(pl){return pl.pos===i&&!pl.bust;});
+    if(c.t==='prop'){
+      d.className='cell colorbar'+(someoneHere?' here':'');d.style.setProperty('--c',COLORS[c.grp]);
+      const own = c.owner!=null ? '<span class="ownerdot" style="background:'+players[c.owner].c+'"></span>':'';
+      d.innerHTML='<div class="nm">'+c.nm+'</div><div class="flower-emoji">'+STAGE[c.petals]+'</div>'+
+        '<div><span class="price">$'+c.price+'</span> '+own+'</div>';
+    } else {
+      d.className='cell special'+(someoneHere?' here':'');
+      d.innerHTML='<div class="ico">'+c.ico+'</div><div class="nm">'+c.nm+'</div>';
+    }
+    // hover 顯示完整浮動資訊卡（不被裁切）
+    (function(cell){
+      d.addEventListener('mouseenter',function(ev){showTooltip(cell, d);});
+      d.addEventListener('mouseleave',hideTooltip);
+    })(c);
+    const pp=players.filter(function(pl){return pl.pos===i&&!pl.bust;});
+    if(pp.length){const wrap=document.createElement('div');wrap.className='owners';
+      pp.forEach(function(pl){const s=document.createElement('div');s.className='pawn';
+        s.style.background=pl.c;s.textContent=pl.e;wrap.appendChild(s);});d.appendChild(wrap);}
+    b.appendChild(d);
+  });
+  const pc=document.getElementById('players');pc.innerHTML='';
+  players.forEach(function(pl,i){
+    const el=document.createElement('div');el.className='pcard'+(i===cur?' active':'')+(pl.bust?' bust':'');
+    el.innerHTML='<div class="pavatar" style="background:'+pl.c+'">'+pl.e+'</div>'+
+      '<div><div class="pname">'+pl.name+(pl.cpu?'<span class="cpu-badge">🤖AI</span>':'')+'</div>'+
+      '<div style="font-size:12px;color:var(--muted)">'+(pl.bust?'💀已出局':(pl.jail>0?'🥀枯萎中':'🌿種植中'))+(pl.seeds>0?' · 🌰x'+pl.seeds:'')+'</div></div>'+
+      '<div class="pcash">$'+pl.cash+'</div>';
+    pc.appendChild(el);
+  });
+  updateButtons();
+}
+
+function updateButtons(){
+  const p=players[cur]; const cell=lastCell!=null?BOARD[lastCell]:null;
+  document.getElementById('rollBtn').disabled = state!=='roll';
+  let canBuy=false;
+  if(state==='act'&&cell&&cell.t==='prop'&&cell.owner===null&&p.cash>=cell.price) canBuy=true;
+  document.getElementById('buyBtn').disabled=!canBuy;
+  document.getElementById('growBtn').disabled = !(state==='act'&&canGrowAny());
+}
+// 落點結算後：判斷玩家是否有可做的動作（買或種）。沒有就自動換人。
+function offerActionOrEnd(){
+  const p=players[cur];
+  if(p.cpu) return; // 電腦由 cpuAfterMove 處理
+  // 若落點觸發了卡片(陽光/蟲害/祕密地圖),等玩家看完卡片再判斷
+  if(document.getElementById('overlay').classList.contains('show')){
+    setTimeout(offerActionOrEnd, 300);return;
+  }
+  const cell=lastCell!=null?BOARD[lastCell]:null;
+  const canBuy = cell&&cell.t==='prop'&&cell.owner===null&&p.cash>=cell.price;
+  const canGrow = canGrowAny();
+  if(canBuy||canGrow){
+    let hint=[];if(canBuy)hint.push('買種子');if(canGrow)hint.push('種一片花瓣');
+    setEvent('🌿','可做一個動作', '選擇：'+hint.join(' 或 ')+'（做完自動換人）', 'good');
+    render();
+  } else {
+    // 無事可做,稍後自動換人
+    setEvent('⏭️','本回合無可做動作', '自動換下一位玩家…', '');
+    render();
+    setTimeout(endTurn, 1100);
+  }
+}
+function canGrowAny(){return monopolyGrps().some(function(g){return growableCells(g).length>0;});}
+function monopolyGrps(){return monopolyGrpsOf(players[cur]);}
+function monopolyGrpsOf(pl){const grps={};BOARD.forEach(function(c){if(c.t==='prop'){(grps[c.grp]=grps[c.grp]||[]).push(c);}});
+  return Object.keys(grps).filter(function(g){return grps[g].every(function(c){return c.owner===pl.id;});});}
+function grpCells(g){return BOARD.filter(function(c){return c.t==='prop'&&c.grp===g;});}
+function growableCells(g){const p=players[cur];const cells=grpCells(g);const minP=Math.min.apply(null,cells.map(function(c){return c.petals;}));
+  return cells.filter(function(c){if(c.petals>=4)return false;if(c.petals!==minP)return false;
+    const cost=c.petals===3?c.cost*2:c.cost;if(p.cash<cost)return false;
+    if(c.petals===3&&mutCount[p.id]>=3)return false;
+    if(c.petals===3&&!cells.every(function(x){return x.petals>=3;}))return false;return true;});}
+
+function rollDice(){
+  if(state!=='roll')return;if(!actx)audio();const p=players[cur];SFX.roll();
+  if(p.jail>0){
+    // 被困：先擲一次判斷是否擲出雙數脫困
+    const j1=1+Math.floor(Math.random()*6),j2=1+Math.floor(Math.random()*6);
+    p.cash+=40; // 休養補償
+    if(j1===j2){p.jail=0;log('🦋 '+p.name+' 擲出雙數('+j1+','+j2+')，蝴蝶帶你飛出枯萎花園！（領休養補償 +40）');
+      setEvent('🦋','脫困成功！',p.name+' 擲雙數脫離枯萎花園','good');}
+    else{p.jail--;const ransom=50;p.cash-=ransom;
+      log('🌧️ '+p.name+' 沒擲出雙數，付贖金 '+ransom+' 離開（領休養補償 +40）。');
+      setEvent('🥀','付贖金脫困',p.name+' 付 $'+ransom+' 離開枯萎花園','bad');}
+    render();
+  }
+  setEvent('🎲','擲骰中…','骰子滾動中','');
+  const dEl=function(){return document.getElementById('bigdice');};
+  if(dEl())dEl().classList.add('rolling');
+  let ticks=0;
+  const anim=setInterval(function(){
+    const a=1+Math.floor(Math.random()*6),b=1+Math.floor(Math.random()*6);
+    evt.dice=diceFace(a)+' '+diceFace(b);if(dEl())dEl().textContent=evt.dice;
+    if(++ticks>6){clearInterval(anim);if(dEl())dEl().classList.remove('rolling');finishRoll(p);}
+  },70);
+}
+function finishRoll(p){
+  const d1=1+Math.floor(Math.random()*6), d2=1+Math.floor(Math.random()*6);
+  evt.dice=diceFace(d1)+' '+diceFace(d2);
+  const steps=d1+d2;
+  setEvent('👣', p.name+' 擲出 '+d1+'+'+d2+'='+steps, '棋子開始移動…', '');
+  log(p.name+' 擲出 <b>'+d1+'+'+d2+'='+steps+'</b>，前進 '+steps+' 格。');
+  stepMove(p, steps);
+}
+// 逐格移動動畫：一格一格走,每步重繪並標記跳動,走完才結算落點
+function stepMove(p, remaining){
+  if(remaining<=0){
+    lastCell=p.pos; state='act';
+    setEvent('👣', p.name+' 抵達', '「'+BOARD[p.pos].nm+'」', '');
+    resolveCell(); render();
+    if(p.cpu){ setTimeout(cpuAfterMove, 650); }
+    else { setTimeout(offerActionOrEnd, 350); } // 給結算事件一點顯示時間,再提示可做的動作
+    return;
+  }
+  const before=p.pos;
+  p.pos=(p.pos+1)%N;
+  if(p.pos===0){p.cash+=200;SFX.go();log(p.name+' 經過春之苗圃 +200。');}
+  SFX.roll && tone(300+remaining*15,0.04,'square',0.08);
+  render();
+  // 標記移動中的棋子跳動
+  markMovingPawn(p);
+  setTimeout(function(){stepMove(p, remaining-1);}, 180);
+}
+function markMovingPawn(p){
+  // 在剛重繪的棋盤上,為當前玩家所在格的棋子加上 moving class
+  const cells=document.querySelectorAll('.board .cell');
+  // 簡化:找含有該玩家 emoji 的 pawn 加動畫
+  document.querySelectorAll('.pawn').forEach(function(el){
+    if(el.textContent===p.e){el.classList.add('moving');setTimeout(function(){el.classList.remove('moving');},180);}
+  });
+}
+function diceFace(n){return ['','⚀','⚁','⚂','⚃','⚄','⚅'][n];}
+
+function resolveCell(){
+  const p=players[cur];const c=BOARD[p.pos];
+  switch(c.t){
+    case 'prop':
+      if(c.owner===null){
+        if(p.cash>=c.price) setEvent('🌱','空地：'+c.nm, '售價 $'+c.price+'，可買下種子取得地權','good');
+        else setEvent('🌱','空地：'+c.nm, '售價 $'+c.price+'（現金不足）','');
+      } else if(c.owner!==p.id && !players[c.owner].bust){
+        const rent=c.rent*RENTMULT[c.petals];SFX.rent();
+        p.cash-=rent;players[c.owner].cash+=rent;
+        log(p.name+' 在「'+c.nm+'」('+STAGE[c.petals]+') 付租金 <b>'+rent+'</b> 給 '+players[c.owner].name+'。');
+        setEvent('💰','付租金 '+STAGE[c.petals], p.name+' 付 $'+rent+' 給 '+players[c.owner].name,'bad');
+        if(c.mutated){players[c.owner].seeds++;log('🌺✨ 稀有變異花結出種子！'+players[c.owner].name+' 獲得折價種子。');}
+      } else { setEvent('🏡','自己的花圃：'+c.nm, '目前 '+STAGE[c.petals]+'，可在建設階段種花瓣',''); }
+      break;
+    case 'tax': p.cash-=c.amt;SFX.bad();log(p.name+' 繳 '+c.nm+' -'+c.amt+'。');setEvent('🧾',c.nm,p.name+' 繳稅 -$'+c.amt,'bad');break;
+    case 'go': p.cash+=200;SFX.go();log(p.name+' 停在春之苗圃 +200。');setEvent('🌅','春之苗圃',p.name+' 領陽光補助 +$200','good');break;
+    case 'gojail': sendToWither(p,'被雜草入侵');break;
+    case 'sun': drawCard(true);break;
+    case 'bug': drawCard(false);break;
+    case 'market': beeMarket(p);break;
+    case 'portal': portal(p);break;
+    case 'season': seasonShift();break;
+    case 'free': p.cash+=100;SFX.buy();log('🏡 '+p.name+' 在自由花園領落花基金 +100。');setEvent('🏡','自由花園',p.name+' 領落花基金 +$100','good');break;
+    case 'jail': witherEvent(p);break;
+  }
+  checkBust(p);
+}
+function findJail(){return BOARD.findIndex(function(c){return c.t==='jail';});}
+
+// ===== 枯萎花園（升級版）=====
+function sendToWither(p,reason){
+  p.pos=findJail();p.jail=3;SFX.bad();
+  log('🥀 '+p.name+' '+reason+'，被送進枯萎花園（最多 3 回合）！');
+  setEvent('🌿💀',reason+'！',p.name+' 進入枯萎花園，花朵暫停生長','bad');
+}
+// 路過/停留枯萎花園時的隨機事件（探訪者也可能有小際遇）
+function witherEvent(p){
+  if(p.jail>0){
+    // 被困中：每回合領休養補償，並有機會提早脫困
+    p.cash+=40;
+    log('🌧️ '+p.name+' 在枯萎花園休養，領補償金 +40（仍可收租）。');
+    setEvent('🥀','枯萎花園 · 休養',p.name+' 領休養補償 +$40，可付贖金或擲雙數脫困','bad');
+    return;
+  }
+  // 只是路過：隨機小際遇
+  const r=Math.random();
+  if(r<0.34){const g=60+Math.floor(Math.random()*60);p.cash+=g;SFX.buy();
+    log('🦋 '+p.name+' 在枯萎花園遇到蝴蝶救援，獲得 +'+g+'。');
+    setEvent('🦋','蝴蝶救援',p.name+' 路過枯萎花園，獲得 +$'+g,'good');
+  } else if(r<0.6){growFreePetal(p);
+    log('🌱 '+p.name+' 在枯萎花園發現一顆種子，花圃免費成長一瓣。');
+    setEvent('🌱','意外發現種子',p.name+' 一處花圃免費成長一瓣','good');
+  } else if(r<0.8){p.cash+=0;
+    log('🌿 '+p.name+' 路過枯萎花園，平安無事。');
+    setEvent('🥀','路過枯萎花園','只是探訪，平安通過','');
+  } else {p.seeds++;
+    log('🌰 '+p.name+' 在枯萎花園撿到折價種子一顆。');
+    setEvent('🌰','撿到種子',p.name+' 獲得 1 顆折價種子','good');
+  }
+}
+
+function beeMarket(p){SFX.card();const gain=80+Math.floor(Math.random()*120);p.cash+=gain;
+  setEvent('🐝','蜜蜂市集',p.name+' 賣花收入 +$'+gain,'good');log('🐝 '+p.name+' 在蜜蜂市集賣花 +'+gain+'。');}
+function portal(p){SFX.card();const props=BOARD.map(function(c,i){return c.t==='prop'?i:-1;}).filter(function(i){return i>=0;});
+  const dest=props[Math.floor(Math.random()*props.length)];p.pos=dest;lastCell=dest;
+  setEvent('🌀','傳送門！',p.name+' 被花粉旋風捲到「'+BOARD[dest].nm+'」','big');log('🌀 '+p.name+' 進入傳送門，移到「'+BOARD[dest].nm+'」。');
+  const c=BOARD[dest];if(c.owner!=null&&c.owner!==p.id&&!players[c.owner].bust){const rent=c.rent*RENTMULT[c.petals];p.cash-=rent;players[c.owner].cash+=rent;log('↳ 並付租金 '+rent+' 給 '+players[c.owner].name+'。');}}
+function seasonShift(){SFX.card();
+  if(Math.random()<0.5){let n=0;players.forEach(function(pl){if(pl.bust)return;monopolyGrpsOf(pl).forEach(function(g){const cs=grpCells(g);const m=Math.min.apply(null,cs.map(function(c){return c.petals;}));const t=cs.find(function(c){return c.petals===m&&c.petals<3;});if(t){t.petals++;n++;}});});
+    setEvent('🌸','季節轉換 · 暖春','全體花圃免費成長一瓣（共 '+n+' 處）','big');log('🍂 季節轉換（暖春）：'+n+' 處花圃免費成長。');
+  }else{let n=0;players.forEach(function(pl){if(pl.bust)return;let best=null;BOARD.forEach(function(c){if(c.t==='prop'&&c.owner===pl.id&&c.petals>0&&c.petals<4&&(!best||c.petals>best.petals))best=c;});if(best){best.petals--;n++;}});SFX.bad();
+    setEvent('❄️','季節轉換 · 寒霜','全體最高花瓣凍傷退回（共 '+n+' 處）','bad');log('🍂 季節轉換（寒霜）：'+n+' 處花瓣凍傷。');}
+  render();
+}
+
+const SUN_CARDS=[
+  {ico:'☀️',t:'園藝市集',d:'你的花在市集大受歡迎！立即 <b>+150</b> 元。',f:function(p){p.cash+=150;}},
+  {ico:'💧',t:'春雨綿綿',d:'甘霖滋潤，你最低的一片花圃免費成長一瓣（上限3瓣）。',f:function(p){growFreePetal(p);}},
+  {ico:'🐝',t:'蜜蜂授粉',d:'向每位擁有完整綻放花的對手收取 50 元授粉費。',f:function(p){players.forEach(function(o){if(o.id!==p.id&&!o.bust&&BOARD.some(function(c){return c.owner===o.id&&c.petals>=3;})){o.cash-=50;p.cash+=50;}});}},
+  {ico:'🚀',t:'直達苗圃',d:'前進到春之苗圃並領取 <b>200</b> 元。',f:function(p){p.cash+=200;p.pos=0;}},
+  {ico:'🌱',t:'肥沃土壤',d:'你獲得一顆折價種子（下次買地省 50 元）。',f:function(p){p.seeds++;}},
+  {ico:'🎁',t:'園丁補助',d:'政府推廣綠化，全體 <b>+100</b>，你額外再 +100。',f:function(p){players.forEach(function(o){if(!o.bust)o.cash+=100;});p.cash+=100;}},
+  {ico:'🗺️',t:'祕密地圖 · 彩虹花園',d:'你發現通往<b>中央彩虹花園 🌈</b>的祕密通道！探訪稀有種子站、許願池、彩虹溫室——偏向花朵成長與綻放。',f:function(p){enterSecret(p,'A');}},
+  {ico:'🗝️',t:'黃金鑰匙 · 黃金花園',d:'你拾獲通往<b>中央黃金花園 ✨</b>的黃金鑰匙！探訪黃金噴泉、蝴蝶大廳、月光溫室——偏向財富與種子。',f:function(p){enterSecret(p,'B');}},
+];
+const BUG_CARDS=[
+  {ico:'🐛',t:'蚜蟲來襲',d:'你最高階的一朵花損失一片花瓣。',f:function(p){loseTopPetal(p);}},
+  {ico:'❄️',t:'霜害',d:'寒流來襲，繳取暖費 <b>-80</b>。',f:function(p){p.cash-=80;}},
+  {ico:'🌿',t:'雜草蔓延',d:'依花瓣數繳除草費（每片 25 元）。',f:function(p){let n=0;BOARD.forEach(function(c){if(c.owner===p.id)n+=c.petals;});p.cash-=n*25;}},
+  {ico:'🦗',t:'蝗蟲過境',d:'損失 <b>-120</b> 元災損。',f:function(p){p.cash-=120;}},
+  {ico:'🌪️',t:'狂風',d:'花被吹亂，直接進入枯萎花園！',f:function(p){sendToWither(p,'被狂風吹亂');}},
+  {ico:'🍂',t:'落葉繳稅',d:'繳園藝稅 <b>-100</b>。',f:function(p){p.cash-=100;}},
+];
+function drawCard(sunny){SFX.card();const p=players[cur];const deck=sunny?SUN_CARDS:BUG_CARDS;const card=deck[Math.floor(Math.random()*deck.length)];
+  if(!sunny)SFX.bad();pendingCard={card:card,p:p,sunny:sunny};
+  setEvent(sunny?'☀️':'🐛', (sunny?'陽光卡':'蟲害卡')+'：'+card.t, '翻開卡片…', sunny?'good':'bad');
+  showCard(sunny?'sun':'bug', card.ico, (sunny?'☀️陽光卡':'🐛蟲害卡')+' · '+card.t, card.d);}
+function showCard(cls,ico,title,desc){const ov=document.getElementById('overlay');
+  document.getElementById('cardEl').className='card '+(cls==='sun'?'sun':(cls==='bug'?'bug':''));
+  document.getElementById('cico').textContent=ico;document.getElementById('ctitle').textContent=title;
+  document.getElementById('cdesc').innerHTML=desc;ov.classList.add('show');}
+function closeCard(){document.getElementById('overlay').classList.remove('show');
+  if(pendingCard){const card=pendingCard.card,p=pendingCard.p;card.f(p);
+    const plain=card.d.replace(/<[^>]+>/g,'');log((pendingCard.sunny?'☀️':'🐛')+card.t+'：'+plain);
+    setEvent(card.ico, card.t, plain, pendingCard.sunny?'good':'bad');pendingCard=null;checkBust(p);}render();}
+function growFreePetal(p){const grps=monopolyGrpsOf(p);for(let i=0;i<grps.length;i++){const cs=grpCells(grps[i]);const m=Math.min.apply(null,cs.map(function(c){return c.petals;}));const t=cs.find(function(c){return c.petals===m&&c.petals<3;});if(t){t.petals++;SFX.grow();return;}}}
+function loseTopPetal(p){let best=null;BOARD.forEach(function(c){if(c.t==='prop'&&c.owner===p.id&&c.petals>0&&(!best||c.petals>best.petals))best=c;});if(best){best.petals--;if(best.petals<4)best.mutated=false;}}
+
+// ===== 中央祕密花園 =====
+// 進入後逐格探訪 3 個特殊獎勵格，結算後從對面出口回到外圈。
+function enterSecret(p,which){
+  SFX.bloom();
+  const garden = which==='B'?SECRET_B:SECRET_A;
+  const gname = which==='B'?'黃金花園 ✨':'彩虹花園 🌈';
+  inSecret=which;
+  setEvent('🗺️','進入'+gname+'！',p.name+' 穿越中央祕密通道，探訪隱藏獎勵','big');
+  log('🗺️ '+p.name+' 透過祕密地圖進入中央「'+gname+'」！');
+  render(); // 讓棋子顯示在中央花園
+  for(var i=0;i<garden.length;i++){p._sec=i;secretBonus(p,garden[i]);}
+  inSecret=false; p._sec=undefined;
+  // 兩座花園各從不同出口回到外圈
+  const exitType = which==='B' ? 'go' : 'free';
+  const exitPos=BOARD.findIndex(function(c){return c.t===exitType;});
+  p.pos=(exitPos>=0?exitPos:0); lastCell=p.pos;
+  log('↳ '+p.name+' 從祕密通道出口回到「'+BOARD[p.pos].nm+'」。');
+}
+function secretBonus(p,cell){
+  switch(cell.t){
+    // ---- 彩虹花園 A ----
+    case 'seed_station':
+      p.seeds+=2; p.cash+=100;
+      log('🌟 稀有種子站：'+p.name+' 獲得 2 顆稀有折價種子 + $100。');break;
+    case 'wish_pool':{
+      const r=Math.random();
+      if(r<0.34){p.cash+=300;log('🪙 許願池：'+p.name+' 願望成真，獲得 $300！');}
+      else if(r<0.67){growFreePetal(p);growFreePetal(p);log('🪙 許願池：'+p.name+' 的花圃免費成長兩瓣！');}
+      else{p.seeds+=1;p.cash+=150;log('🪙 許願池：'+p.name+' 獲得 $150 + 1 顆種子。');}break;}
+    case 'rainbow_house':{
+      var done=false;
+      monopolyGrpsOf(p).forEach(function(g){if(done)return;const cs=grpCells(g);
+        const m=Math.min.apply(null,cs.map(function(c){return c.petals;}));
+        const t=cs.find(function(c){return c.petals===m&&c.petals<3;});if(t){t.petals=3;done=true;}});
+      if(done){SFX.bloom();log('🌈 彩虹溫室：'+p.name+' 一處花圃直接綻放成完整花 🌸！');}
+      else{p.cash+=200;log('🌈 彩虹溫室：'+p.name+' 暫無可綻放花圃，改領 $200。');}break;}
+    // ---- 黃金花園 B ----
+    case 'gold_fountain':
+      p.cash+=350;log('⛲ 黃金噴泉：'+p.name+' 撈起滿手金幣 +$350！');break;
+    case 'butterfly_hall':{
+      // 蝴蝶大廳：向每位對手收取 60 元羨慕費
+      let got=0;players.forEach(function(o){if(o.id!==p.id&&!o.bust){o.cash-=60;got+=60;}});
+      p.cash+=got;log('🦋 蝴蝶大廳：'+p.name+' 向對手收取共 $'+got+' 羨慕費。');break;}
+    case 'moon_greenhouse':{
+      // 月光溫室：保留現有花瓣下,給一張免枯萎護身 + 3 顆種子
+      p.seeds+=3;p.cash+=120;log('🌙 月光溫室：'+p.name+' 獲得 3 顆種子 + $120。');break;}
+  }
+}
+
+// ===== 人類單動作：做完一個動作就自動換人 =====
+let turnEnding=false;
+function humanBuy(){
+  if(state!=='act'||turnEnding)return;
+  buySeed();
+  finishHumanAction();
+}
+function humanGrow(){
+  if(state!=='act'||turnEnding)return;
+  growPetal();
+  finishHumanAction();
+}
+function finishHumanAction(){
+  turnEnding=true;
+  // 種花瓣的變異/綻放可能彈出卡片,等卡片關閉再換人
+  const overlayShown=document.getElementById('overlay').classList.contains('show');
+  if(overlayShown){
+    waitCardThenEnd();
+  } else {
+    setEvent('⏭️','動作完成', '自動換下一位玩家…', '');
+    render();
+    setTimeout(function(){turnEnding=false;endTurn();}, 900);
+  }
+}
+function waitCardThenEnd(){
+  // 輪詢等待卡片關閉(玩家按「好的」)後換人
+  if(document.getElementById('overlay').classList.contains('show')){
+    setTimeout(waitCardThenEnd, 300);return;
+  }
+  setEvent('⏭️','動作完成', '自動換下一位玩家…', '');
+  render();
+  setTimeout(function(){turnEnding=false;endTurn();}, 700);
+}
+
+function buySeed(){const p=players[cur];const c=BOARD[lastCell];if(c.owner!==null)return;
+  let price=c.price,used=false;if(p.seeds>0){price=Math.max(0,price-50);p.seeds--;used=true;}
+  if(p.cash<price){if(used)p.seeds++;return;}p.cash-=price;c.owner=p.id;SFX.buy();
+  log('🌱 '+p.name+' 買下「'+c.nm+'」種子，花費 '+price+(used?'（折價）':'')+'。');
+  setEvent('🌱','買下種子！',p.name+' 取得「'+c.nm+'」地權 -$'+price,'good');render();}
+
+function growPetal(){const p=players[cur];let target=null;const grps=monopolyGrps();
+  for(let i=0;i<grps.length;i++){const gc=growableCells(grps[i]);if(gc.length){target=gc[0];break;}}
+  if(!target){log('目前沒有可種花瓣的花圃（需壟斷整色且平均成長）。');return;}
+  if(target.petals===3){const cost=target.cost*2;p.cash-=cost;const roll=1+Math.floor(Math.random()*6);
+    if(roll>=4){target.petals=4;target.mutated=true;mutCount[p.id]++;SFX.mutate();
+      setEvent('🌺','育種成功！','骰='+roll+'：「'+target.nm+'」變異成稀有花！租金 ×80','big');
+      showCard('sun','🌺','育種成功！','育種骰 = '+roll+'！「'+target.nm+'」成功變異成<b>稀有花</b>，租金 ×80，且每次有人停留會額外結種子！');
+      log('🌺✨ 育種骰='+roll+'！「'+target.nm+'」成功變異！（花費 '+cost+'）');
+      if(!p.legend){p.legend=true;p.cash+=200;log('🏅 '+p.name+' 達成「育種傳奇」+200！');}
+    }else if(roll>=2){target.petals=4;mutCount[p.id]++;SFX.bloom();
+      setEvent('🌺','普通變異','骰='+roll+'：「'+target.nm+'」變異成功，租金 ×80','big');
+      showCard('sun','🌺','普通變異','育種骰 = '+roll+'：「'+target.nm+'」普通變異成功，租金 ×80。');
+      log('🌺 育種骰='+roll+'：「'+target.nm+'」普通變異。（花費 '+cost+'）');
+    }else{SFX.fail();setEvent('🥀','變異失敗','骰='+roll+'：徒長失敗，成本不退還','bad');
+      showCard('bug','🥀','變異失敗','育種骰 = '+roll+'：徒長失敗！「'+target.nm+'」維持綻放(3瓣)，成本 '+cost+' 不退還。');
+      log('🥀 育種骰='+roll+'：「'+target.nm+'」變異失敗。');}
+  }else{p.cash-=target.cost;target.petals++;const names=['','花苞','半開','綻放完整花'];
+    if(target.petals===3){SFX.bloom();}else{SFX.grow();}
+    log(STAGE[target.petals]+' '+p.name+' 在「'+target.nm+'」種第 '+target.petals+' 瓣 → '+names[target.petals]+'！（花費 '+target.cost+'）');
+    setEvent(STAGE[target.petals], '種花瓣 → '+names[target.petals], p.name+' 在「'+target.nm+'」種第 '+target.petals+' 瓣', target.petals===3?'big':'good');
+    if(target.petals===3) checkGardenMaster(p);}
+  checkBust(p);render();}
+
+function checkGardenMaster(p){const bloomed={};BOARD.forEach(function(c){if(c.t==='prop'&&c.owner===p.id&&c.petals>=3)bloomed[c.grp]=1;});
+  if(Object.keys(bloomed).length>=3&&!p.master){p.master=true;p.cash+=300;SFX.bloom();log('👑 '+p.name+' 達成「花園大師」+300！');}}
+
+function checkBust(p){if(p.cash<0){p.bust=true;SFX.bust();
+  BOARD.forEach(function(c){if(c.t==='prop'&&c.owner===p.id){c.owner=null;c.petals=0;c.mutated=false;}});
+  log('💀 '+p.name+' 破產出局，土地回歸荒地。');setEvent('💀','破產！',p.name+' 資產不足，出局','bad');
+  const alive=players.filter(function(x){return !x.bust;});
+  if(alive.length===1){log('🏆 '+alive[0].name+' 成為花花大富翁！');setEvent('🏆','遊戲結束！',alive[0].name+' 成為花花大富翁！','big');state='over';}}}
+
+// ===== 電腦 AI（穩健型）=====
+let cpuBusy=false;
+function maybeRunCpu(){
+  const p=players[cur];
+  if(p&&p.cpu&&!p.bust&&state==='roll'&&!cpuBusy){
+    cpuBusy=true;
+    setEvent('🤖', p.name+' 思考中…', '電腦準備擲骰', '');
+    setTimeout(function(){cpuBusy=false;rollDice();}, 800);
+  }
+}
+// 移動結算後（resolveCell 完成）電腦做「一個」動作就換人（與人類同規則）
+function cpuAfterMove(){
+  const p=players[cur];
+  if(!p||!p.cpu||p.bust){return;}
+  // 若有待處理卡片,先看完
+  if(pendingCard){setTimeout(function(){closeCard();setTimeout(cpuAfterMove,600);},800);return;}
+  if(state!=='act'){return;}
+  // 穩健策略:優先買得起的空地(留 150 緩衝),否則種一片花瓣(留緩衝),否則直接換人
+  const cell=lastCell!=null?BOARD[lastCell]:null;
+  if(cell&&cell.t==='prop'&&cell.owner===null&&p.cash>=cell.price+150){
+    buySeed();
+    cpuEndAfterAction();return;
+  }
+  // 種一片花瓣
+  if(canGrowAny()){
+    let target=null;const grps=monopolyGrps();
+    for(let i=0;i<grps.length;i++){const gc=growableCells(grps[i]);if(gc.length){target=gc[0];break;}}
+    if(target){
+      const isMut=(target.petals===3);const cost=isMut?target.cost*2:target.cost;const buffer=isMut?400:200;
+      if(p.cash>=cost+buffer){
+        growPetal();
+        cpuEndAfterAction();return;
+      }
+    }
+  }
+  // 無動作可做,直接換人
+  setTimeout(function(){endTurn();}, 700);
+}
+// 電腦做完一個動作後換人;若動作彈出卡片(變異),先關卡再換
+function cpuEndAfterAction(){
+  if(document.getElementById('overlay').classList.contains('show')){
+    setTimeout(function(){closeCard();setTimeout(function(){endTurn();},700);}, 900);
+  } else {
+    setTimeout(function(){endTurn();}, 800);
+  }
+}
+
+function endTurn(){if(state!=='act'&&state!=='roll')return;do{cur=(cur+1)%players.length;}while(players[cur].bust);
+  state='roll';lastCell=null;evt.dice='🎲 🎲';
+  const p=players[cur];
+  setEvent('🎲', p.name+' 的回合', p.cpu?'電腦準備行動…':'點擊「擲骰移動」開始','');
+  render();
+  maybeRunCpu();
+}
+
+function log(msg){const l=document.getElementById('log');l.innerHTML='<div>• '+msg+'</div>'+l.innerHTML;}
+
+// 音樂勾選變更
+document.getElementById('musicToggle').addEventListener('change',function(e){
+  if(!actx)audio();if(e.target.checked)startMusic();else stopMusic();
+});
+// 開場畫面停在 start screen，等使用者選人數
+updatePicks(); // 初始化人數選擇提示
+</script>
+</body>
+</html>
